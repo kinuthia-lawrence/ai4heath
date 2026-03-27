@@ -1,0 +1,20 @@
+@startuml AI4Health_Architecture
+!define RECTANGLE class
+
+RECTANGLE "Existing Health Data\n(Kenya Health Info System, CSV, DB)" as DataSource
+RECTANGLE "Data Preprocessing\n(app/utils/utils.py)" as Preprocessing
+RECTANGLE "ML Model\n(app/models/model.py)" as Model
+RECTANGLE "Prediction & Explainability\n(app/services/predict.py)" as Service
+RECTANGLE "API Layer\n(app/api/endpoints.py, main.py)" as API
+RECTANGLE "User Interface\n(Dashboard, Client App)" as UI
+
+DataSource --> Preprocessing : Load & Clean Data
+Preprocessing --> Model : Feature Extraction
+Model --> Service : Model Inference
+Service --> API : Prediction & SHAP Output
+API --> UI : JSON Response (Prediction, Explanation)
+UI --> API : Prediction Request (Symptoms, Data)
+API --> Service : Forward Request
+Service --> Model : Query Model
+
+@enduml
