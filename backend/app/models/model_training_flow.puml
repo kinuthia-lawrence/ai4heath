@@ -1,0 +1,12 @@
+@startuml Model Training Pipeline Flowchart
+start
+:Load Data (pandas reads health_data.csv);
+:Preprocess Data\n- Handle missing values\n- Encode categorical variables;
+:Select Features & Target\n- Symptoms, vitals, demographics\n- Target: diagnosis (default);
+:Split Data (train_test_split 80/20);
+:Train Model (RandomForestClassifier);
+:Evaluate Model (classification_report);
+:Show Validation Metrics\n- Accuracy\n- Precision\n- Recall\n- F1-score;
+:Save Model (joblib to model.pkl);
+stop
+@enduml

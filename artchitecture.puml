@@ -2,35 +2,15 @@
 
 start
 
-:Simulate or Import Health Data\n(CSV, JSON, Kenya Health Info System, DB);
-:Data Ingestion\n(app/utils/data_loader.py);
-:Data Preprocessing\n(app/utils/utils.py);
-:Feature Engineering\n(app/utils/feature_engineering.py);
-
-:Model already trained?; 
-if ("Yes") then ([Yes])
-  :Load Trained Model\n(app/models/model.py);
-else ([No])
-  :Train Model on Existing Data\n(app/models/model.py);
-  :Save Trained Model;
-endif
-
+:Import Health Data;
+:Model Training;
 repeat
-  :Clone Job Triggers Prediction;
-  :Preprocess New Data Batch;
-  :Model Inference (Prediction)\n(app/models/model.py);
-  :Generate Explainability (SHAP/LIME)\n(app/services/explain.py);
-  :Store Prediction & Explanation Results;
-  :Log Monitoring & Feedback\n(app/utils/monitor.py);
-repeat while (More Data Batches?)
+  :Batch of New Data (Simulate/API);
+  :Generate Explainable Results;
+  :Store Results;
+repeat while (More Batches?)
 
-:New Data Accumulates?; 
-if ("Yes") then ([Yes])
-  :Retrain Model Periodically;
-  :Save Updated Model;
-endif
-
-:Frontend UI Pulls Analytics Results for Display;
+:Frontend UI Fetches Analytics;
 
 stop
 
