@@ -69,6 +69,49 @@ def save_model(model, path=MODEL_PATH):
 	joblib.dump(model, path)
 	print(f"Model saved to {path}")
 
+def compute_risk_score(symptoms_dict, vitals_dict):
+	"""Compute risk level (High/Medium/Low) based on symptoms and vitals."""
+	score = 0
+	
+	# Symptom risk factors
+	high_risk_symptoms = ['shortness_of_breath', 'vomiting', 'diarrhea']
+	medium_risk_symptoms = ['fever', 'chills', 'fatigue']
+	
+	for symptom in high_risk_symptoms:
+		if symptoms_dict.get(symptom) == 1:
+			score += 3
+	for symptom in medium_risk_symptoms:
+		if symptoms_dict.get(symptom) == 1:
+			score += 1
+	
+	# Vital signs risk factors
+	temp = vitals_dict.get('temperature', 37)
+	if temp > 39:
+		score += 2
+	elif temp > 38:
+		score += 1
+	
+	ox = vitals_dict.get('oxygen_saturation', 95)
+	if ox < 92:
+		score += 3
+	elif ox < 94:
+		score += 1
+	
+	# Risk classification
+	if score >= 5:
+		return "High"
+	elif score >= 2:
+		return "Medium"
+	else:
+		return "Low"
+
+def is_unusual_pattern(symptom_count, group_size):
+	"""Flag if this symptom pattern is unusual (high concentration)."""
+	# If more than 50% of a group has the same symptoms, it's unusual
+	if symptom_count >= 3 and (symptom_count / group_size) > 0.5:
+		return True
+	return False
+
 if __name__ == "__main__":
 	df = load_data()
 	df, label_encoders = preprocess_data(df)

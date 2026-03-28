@@ -13,8 +13,48 @@ symptom_fields = [
     "skin_rash", "conjunctivitis"
 ]
 
-def random_symptoms():
-    return [s for s in symptom_fields if random.random() < 0.2]
+def generate_disease_symptoms(diagnosis):
+    """Generate CLEAR, OBVIOUS symptoms based on disease for strong training signal.
+    
+    Returns exactly 15 binary values corresponding to:
+    cough(0), fever(1), headache(2), fatigue(3), vomiting(4), diarrhea(5),
+    shortness_of_breath(6), sore_throat(7), loss_of_taste(8), loss_of_smell(9),
+    body_pain(10), runny_nose(11), chills(12), skin_rash(13), conjunctivitis(14)
+    """
+    symptoms = [0] * 15
+    
+    if diagnosis == "malaria":
+        # Malaria: fever + chills + body_pain
+        symptoms[1] = 1   # fever
+        symptoms[12] = 1  # chills
+        symptoms[10] = 1  # body_pain
+    elif diagnosis == "pneumonia":
+        # Pneumonia: cough + shortness_of_breath + fever
+        symptoms[0] = 1   # cough
+        symptoms[6] = 1   # shortness_of_breath
+        symptoms[1] = 1   # fever
+    elif diagnosis == "covid19":
+        # COVID: loss_of_taste + loss_of_smell + fever
+        symptoms[8] = 1   # loss_of_taste
+        symptoms[9] = 1   # loss_of_smell
+        symptoms[1] = 1   # fever
+    elif diagnosis == "cholera":
+        # Cholera: diarrhea + vomiting + fatigue
+        symptoms[5] = 1   # diarrhea
+        symptoms[4] = 1   # vomiting
+        symptoms[3] = 1   # fatigue
+    elif diagnosis == "typhoid":
+        # Typhoid: fever + headache + fatigue
+        symptoms[1] = 1   # fever
+        symptoms[2] = 1   # headache
+        symptoms[3] = 1   # fatigue
+    else:  # flu
+        # Flu: cough + runny_nose + headache
+        symptoms[0] = 1   # cough
+        symptoms[11] = 1  # runny_nose
+        symptoms[2] = 1   # headache
+    
+    return symptoms
 
 def random_date(start, end):
     delta = end - start
@@ -23,18 +63,18 @@ def random_date(start, end):
 # -------------------------
 # CLINICAL LOGIC
 # -------------------------
-def generate_temperature(symptoms):
-    if "fever" in symptoms:
+def generate_temperature(symptom_array):
+    if symptom_array[1] == 1:  # fever is at index 1
         return round(random.uniform(37.5, 40.5), 1)
     return round(random.uniform(36.0, 37.4), 1)
 
-def generate_oxygen(symptoms):
-    if "shortness_of_breath" in symptoms:
+def generate_oxygen(symptom_array):
+    if symptom_array[6] == 1:  # shortness_of_breath is at index 6
         return round(random.uniform(85, 94), 1)
     return round(random.uniform(95, 100), 1)
 
-def generate_heart_rate(symptoms):
-    if "fever" in symptoms:
+def generate_heart_rate(symptom_array):
+    if symptom_array[1] == 1:  # fever
         return random.randint(90, 120)
     return random.randint(60, 100)
 
@@ -52,17 +92,17 @@ def generate_diagnosis(symptoms):
     else:
         return "flu"
 
-def generate_risk(symptoms, temperature, age, oxygen):
+def generate_risk(symptom_array, temperature, age, oxygen):
     score = 0
-
+    # Map symptom indices to risk contributions
+    if symptom_array[6] == 1:  # shortness_of_breath
+        score += 2
+    if symptom_array[4] == 1 or symptom_array[5] == 1:  # vomiting or diarrhea
+        score += 1
     if temperature > 39:
         score += 2
     if oxygen < 92:
         score += 3
-    if "shortness_of_breath" in symptoms:
-        score += 2
-    if "vomiting" in symptoms or "diarrhea" in symptoms:
-        score += 1
     if age > 60:
         score += 2
 
@@ -97,6 +137,7 @@ with open("data/health_data.csv", "w", newline="") as csvfile:
     start_date = datetime(2024, 1, 1)
     end_date = datetime(2024, 12, 31)
 
+    diseases = ["malaria", "pneumonia", "covid19", "cholera", "typhoid", "flu"]
     for i in range(1, 5001):
         age = random.randint(1, 90)
         gender = random.choice(genders)
@@ -104,23 +145,22 @@ with open("data/health_data.csv", "w", newline="") as csvfile:
         region = random.choice(regions)
         facility_type = random.choice(facility_types)
 
-        symptoms = random_symptoms()
+        # Generate disease first, then get clear symptoms for that disease
+        diagnosis = random.choice(diseases)
+        symptom_array = generate_disease_symptoms(diagnosis)
 
-        temperature = generate_temperature(symptoms)
-        oxygen = generate_oxygen(symptoms)
-        heart_rate = generate_heart_rate(symptoms)
+        temperature = generate_temperature(symptom_array)
+        oxygen = generate_oxygen(symptom_array)
+        heart_rate = generate_heart_rate(symptom_array)
 
-        diagnosis = generate_diagnosis(symptoms)
-        risk = generate_risk(symptoms, temperature, age, oxygen)
+        risk = generate_risk(symptom_array, temperature, age, oxygen)
         outcome = generate_outcome(risk)
-
-        symptom_bools = [1 if s in symptoms else 0 for s in symptom_fields]
 
         row = [
             i, age, gender, visit_date, region, facility_type,
             temperature, heart_rate, oxygen,
             diagnosis, risk
-        ] + symptom_bools + [outcome]
+        ] + symptom_array + [outcome]
 
         writer.writerow(row)
 
