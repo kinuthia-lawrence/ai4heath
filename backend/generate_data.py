@@ -2,8 +2,8 @@ import csv
 import random
 from datetime import datetime, timedelta
 
-regions = ["Nairobi", "Kisumu", "Mombasa", "Nakuru", "Eldoret", "Machakos", "Meru", "Garissa", "Kakamega", "Kitale"]
-facility_types = ["Hospital", "Clinic", "Health Center"]
+regions = ["Machakos", "Garissa", "Kakamega"]
+facilities = ["Hospital", "Clinic", "Health Center"]
 genders = ["M", "F"]
 
 symptom_fields = [
@@ -122,7 +122,7 @@ def generate_outcome(risk):
         return "recovered"
 
 # -------------------------
-# DATASET
+# OUTBREAK-BIAS DATASET (For demos - clear outbreak signal)
 # -------------------------
 header = [
     "record_id", "age", "gender", "visit_date", "region", "facility_type",
@@ -137,16 +137,27 @@ with open("data/health_data.csv", "w", newline="") as csvfile:
     start_date = datetime(2024, 1, 1)
     end_date = datetime(2024, 12, 31)
 
+    # Regional outbreak distribution
+    region_disease_weights = {
+        "Machakos": {"flu": 0.45, "malaria": 0.30, "pneumonia": 0.15, "covid19": 0.05, "cholera": 0.03, "typhoid": 0.02},
+        "Garissa": {"pneumonia": 0.40, "malaria": 0.35, "flu": 0.15, "covid19": 0.05, "typhoid": 0.03, "cholera": 0.02},
+        "Kakamega": {"malaria": 0.50, "flu": 0.20, "cholera": 0.15, "pneumonia": 0.10, "covid19": 0.03, "typhoid": 0.02}
+    }
+    
     diseases = ["malaria", "pneumonia", "covid19", "cholera", "typhoid", "flu"]
     for i in range(1, 5001):
         age = random.randint(1, 90)
         gender = random.choice(genders)
         visit_date = random_date(start_date, end_date).strftime("%Y-%m-%d")
         region = random.choice(regions)
-        facility_type = random.choice(facility_types)
+        facility_type = random.choice(facilities)
 
-        # Generate disease first, then get clear symptoms for that disease
-        diagnosis = random.choice(diseases)
+        # Use weighted disease distribution per region (outbreak bias)
+        weights = region_disease_weights.get(region, {d: 1/6 for d in diseases})
+        diseases_list = list(weights.keys())
+        weights_list = list(weights.values())
+        diagnosis = random.choices(diseases_list, weights=weights_list)[0]
+        
         symptom_array = generate_disease_symptoms(diagnosis)
 
         temperature = generate_temperature(symptom_array)
@@ -164,4 +175,4 @@ with open("data/health_data.csv", "w", newline="") as csvfile:
 
         writer.writerow(row)
 
-print("Generated data/health_data.csv successfully!")
+print("Generated outbreak-biased data/health_data.csv with regional distributions!")
