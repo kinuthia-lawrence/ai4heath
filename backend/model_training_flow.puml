@@ -1,0 +1,64 @@
+@startuml AI4Health: Outbreak Prediction & Explainable Analytics
+!theme plain
+
+start
+
+:**STAGE 1: DATA GENERATION & PREPARATION**;
+
+:Load & Preprocess\n- 5,000 clinical records (health_data.csv)\n- Encode: Gender (M→1, F→0), Region (Machakos→0, Garissa→1, Kakamega→2)\n- Features: 15 symptoms + 3 vitals + 4 demographics (22 total)\n- Split: 80% train (4000), 20% test (1000);
+
+note right
+  **Regional Outbreak Bias**:
+  - Machakos: 45% Flu
+  - Garissa: 40% Pneumonia
+  - Kakamega: 50% Malaria
+  Creates realistic outbreak clusters
+end note
+
+:**STAGE 2: ENSEMBLE MODEL TRAINING**;
+
+split
+:Random Forest (RF)\n- 100 trees, max_depth=15\n- General pattern recognition;
+split again
+:Gradient Boosting (GB)\n- 100 estimators, learning_rate=0.1\n- Sequential error correction;
+end split
+
+:Ensemble Prediction\nconsensus = (RF_prob + GB_prob) / 2\nFinal disease = argmax(consensus_probability);
+
+:**STAGE 3: VALIDATION & METRICS**;
+
+:Accuracy: RF 88-92%, GB 87-90%, Ensemble ≥90%\nPrecision, Recall, F1-Score\nPer-disease confidence:\n- Flu: 0.89 | Malaria: 0.87 | Pneumonia: 0.85\n- COVID-19: 0.84 | Cholera: 0.83 | Typhoid: 0.82;
+
+:**STAGE 4: SHAP-INSPIRED EXPLAINABILITY**;
+
+:Feature Importance Maps (SHAP Aggregated Contributions)\n- Malaria: fever (0.35), chills (0.30), body_pain (0.22)\n- Pneumonia: shortness_of_breath (0.36), cough (0.28), fever (0.20)\n- Flu: cough (0.32), runny_nose (0.27), headache (0.19)\n- Cholera: diarrhea (0.38), vomiting (0.33), fatigue (0.15)\n- Typhoid: fever (0.33), headache (0.28), fatigue (0.21)\n- COVID-19: loss_of_taste (0.32), loss_of_smell (0.30), fever (0.18);
+
+note right
+  **SHAP** = SHapley Additive exPlanations
+  Hardcoded weights (non-dynamic) for interpretability.
+  Output: "Cough contributes 32% to flu prediction"
+  → Clinically understandable at glance
+end note
+
+:**STAGE 5: OUTBREAK DETECTION & FORECASTING**;
+
+split
+:Growth Rate Calculation\ngrowth_rate = min(disease_% / 15.0, 0.75)\nExample: 23% flu → 0.75 (capped)\nForecast = current_cases × (1 + growth_rate);
+split again
+:Outbreak Probability\noutbreak_probability = min(disease_% / 100, 1.0)\nExample: 32% flu → 32% outbreak risk;
+split again
+:Risk Level Classification\n- ≥40% → OUTBREAK LIKELY (RED)\n- 25-39% → RISING (ORANGE)\n- 10-24% → MONITOR (YELLOW)\n- 1-9% → STABLE (GREEN)\n- 0% → LOW ACTIVITY (BLUE);
+end split
+
+:Prediction Output\n- Nationwide: dominant_disease, outbreak_probability, risk_level, confidence\n- Per-Region: regional disease breakdown, SHAP drivers, 7-day forecasts\n- Per-Disease: current cases, predicted cases, growth rate, SHAP drivers;
+
+stop
+
+note right
+  **Pipeline Summary**:
+  Stage 1 → Stage 2 (Parallel: RF + GB)
+  → Stage 3 → Stage 4 → Stage 5 (Parallel: Growth Rate + Outbreak Prob + Risk Levels)
+  → Final Output JSON
+end note
+
+@enduml
