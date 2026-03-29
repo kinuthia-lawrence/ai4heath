@@ -77,8 +77,8 @@ def advanced_outbreak_prediction():
         rf_model = joblib.load(model_dir / "model_rf.pkl")
         gb_model = joblib.load(model_dir / "model_gb.pkl")
         feature_cols = joblib.load(model_dir / "feature_cols.pkl")
-    except:
-        return {"error": "Models not found. Train models first with: python app/models/train_ensemble.py"}
+    except Exception as e:
+        return {"error": f"Models not found or unable to load. Please train models first. Details: {str(e)}"}
     
     # Load batch data
     df = pd.read_csv(batch_path)
@@ -123,12 +123,12 @@ def advanced_outbreak_prediction():
         # Predicted next window (7-day forecast)
         predicted_next = max(count, int(count * (1 + growth_rate)))
         
-        # Status classification
-        if growth_rate >= 0.40:
+        # Status classification (lowered thresholds for demo sensitivity)
+        if growth_rate >= 0.15:
             status = "OUTBREAK LIKELY"
-        elif growth_rate >= 0.25:
+        elif growth_rate >= 0.08:
             status = "RISING"
-        elif growth_rate >= 0.10:
+        elif growth_rate >= 0.03:
             status = "MONITOR"
         else:
             status = "STABLE" if growth_rate > 0 else "LOW ACTIVITY"
@@ -301,16 +301,15 @@ DATA_DIR = Path(__file__).parent.parent.parent / "data"
 BATCH_PATH = DATA_DIR / "batch_data.csv"
 
 @router.post("/simulate-batch")
-def simulate_batch(size: int = 50, mode: str = "obvious"):
-    """Route to appropriate simulator"""
-    if mode == "random":
-        return simulate_batch_random(size)
-    else:
-        return simulate_batch_obvious(size)
-
-@router.post("/simulate-batch-obvious")
-def simulate_batch_obvious(size: int = 50):
-    """Simulate outbreak data with CLEAR disease patterns"""
+def simulate_batch(size: int = 500):
+    """
+    Simulate batch data arrival at national servers (with realistic regional patterns)
+    This automatically triggers prediction processing
+    Returns: Full prediction results with SHAP explainability
+    
+    Args:
+        size: Number of cases to simulate (default 500)
+    """
     np.random.seed(int(datetime.now().timestamp()))
     
     columns = [
@@ -329,90 +328,78 @@ def simulate_batch_obvious(size: int = 50):
         'flu': {'symptoms': ['cough', 'runny_nose', 'headache'], 'temp': (37.5, 39.0)}
     }
     
-    regions = ['Machakos', 'Garissa', 'Kakamega']
+    # Region-to-dominant-disease mapping (realistic outbreak patterns)
+    region_disease_map = {
+        'Machakos': 'flu',
+        'Garissa': 'pneumonia',
+        'Kakamega': 'malaria'
+    }
+    
+    regions = list(region_disease_map.keys())
     facilities = ['Clinic', 'Health Center', 'Hospital']
     genders = ['M', 'F']
-    diseases = list(disease_patterns.keys())
     
     data = []
-    for i in range(size):
-        disease = np.random.choice(diseases)
-        region = np.random.choice(regions)
-        pattern = disease_patterns[disease]
+    cases_per_region = size // 3
+    
+    for region in regions:
+        dominant_disease = region_disease_map[region]
         
-        row_dict = {
-            'age': np.random.randint(1, 85),
-            'gender': np.random.choice(genders),
-            'region': region,
-            'facility_type': np.random.choice(facilities)
-        }
+        # 85% of cases in this region are the dominant disease
+        dominant_count = int(cases_per_region * 0.85)
         
-        temp_range = pattern['temp']
-        temperature = np.round(np.random.uniform(temp_range[0], temp_range[1]), 1)
-        row_dict['temperature'] = temperature
-        row_dict['heart_rate'] = np.random.randint(85, 115) if temperature > 38.5 else np.random.randint(65, 100)
-        row_dict['oxygen_saturation'] = np.round(np.random.uniform(94, 99), 1) if 'shortness_of_breath' not in pattern['symptoms'] else np.round(np.random.uniform(89, 94), 1)
+        # Generate dominant disease cases
+        for i in range(dominant_count):
+            pattern = disease_patterns[dominant_disease]
+            row_dict = {
+                'age': np.random.randint(1, 85),
+                'gender': np.random.choice(genders),
+                'region': region,
+                'facility_type': np.random.choice(facilities)
+            }
+            
+            temp_range = pattern['temp']
+            temperature = np.round(np.random.uniform(temp_range[0], temp_range[1]), 1)
+            row_dict['temperature'] = temperature
+            row_dict['heart_rate'] = np.random.randint(85, 115) if temperature > 38.5 else np.random.randint(65, 100)
+            row_dict['oxygen_saturation'] = np.round(np.random.uniform(94, 99), 1) if 'shortness_of_breath' not in pattern['symptoms'] else np.round(np.random.uniform(89, 94), 1)
+            
+            for col in columns:
+                if col not in row_dict:
+                    row_dict[col] = 1 if col in pattern['symptoms'] else 0
+            
+            data.append(row_dict)
         
-        for col in columns:
-            if col not in row_dict:
-                row_dict[col] = 1 if col in pattern['symptoms'] else 0
+        # 15% random variation
+        remaining = cases_per_region - dominant_count
+        other_diseases = [d for d in disease_patterns.keys() if d != dominant_disease]
         
-        data.append(row_dict)
+        for i in range(remaining):
+            disease = np.random.choice(other_diseases)
+            pattern = disease_patterns[disease]
+            row_dict = {
+                'age': np.random.randint(1, 85),
+                'gender': np.random.choice(genders),
+                'region': region,
+                'facility_type': np.random.choice(facilities)
+            }
+            
+            temp_range = pattern['temp']
+            temperature = np.round(np.random.uniform(temp_range[0], temp_range[1]), 1)
+            row_dict['temperature'] = temperature
+            row_dict['heart_rate'] = np.random.randint(85, 115) if temperature > 38.5 else np.random.randint(65, 100)
+            row_dict['oxygen_saturation'] = np.round(np.random.uniform(94, 99), 1) if 'shortness_of_breath' not in pattern['symptoms'] else np.round(np.random.uniform(89, 94), 1)
+            
+            for col in columns:
+                if col not in row_dict:
+                    row_dict[col] = 1 if col in pattern['symptoms'] else 0
+            
+            data.append(row_dict)
     
     df = pd.DataFrame(data)
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     df.to_csv(BATCH_PATH, index=False)
     
-    return {
-        "status": "success",
-        "message": f"✓ Generated {size} cases with OBVIOUS patterns",
-        "cases_generated": size,
-        "data_type": "Clear disease outbreak patterns",
-        "ready_for_prediction": True
-    }
-
-@router.post("/simulate-batch-random")
-def simulate_batch_random(size: int = 50):
-    """Simulate random symptom patterns"""
-    np.random.seed(int(datetime.now().timestamp()))
-    
-    columns = [
-        'age','gender','region','facility_type','temperature','heart_rate','oxygen_saturation',
-        'cough','fever','headache','fatigue','vomiting','diarrhea','shortness_of_breath',
-        'sore_throat','loss_of_taste','loss_of_smell','body_pain','runny_nose','chills',
-        'skin_rash','conjunctivitis'
-    ]
-    
-    regions = ['Machakos', 'Garissa', 'Kakamega']
-    facilities = ['Clinic', 'Health Center', 'Hospital']
-    genders = ['M', 'F']
-    
-    data = []
-    for i in range(size):
-        row_dict = {
-            'age': np.random.randint(1, 85),
-            'gender': np.random.choice(genders),
-            'region': np.random.choice(regions),
-            'facility_type': np.random.choice(facilities),
-            'temperature': np.round(np.random.uniform(36.5, 40.0), 1),
-            'heart_rate': np.random.randint(60, 120),
-            'oxygen_saturation': np.round(np.random.uniform(85, 99), 1)
-        }
-        
-        for col in columns:
-            if col not in row_dict:
-                row_dict[col] = np.random.randint(0, 2)
-        
-        data.append(row_dict)
-    
-    df = pd.DataFrame(data)
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_csv(BATCH_PATH, index=False)
-    
-    return {
-        "status": "success",
-        "message": f"✓ Generated {size} cases with RANDOM patterns",
-        "cases_generated": size,
-        "data_type": "Random symptom distribution",
-        "ready_for_prediction": True
-    }
+    # Automatically process the simulated data through prediction pipeline
+    # This mimics the automatic processing that happens when data reaches national servers
+    return advanced_outbreak_prediction()

@@ -32,42 +32,55 @@
     </header>
 
     <div class="flex-1 overflow-y-auto max-w-7xl mx-auto px-4 py-4 w-full">
+      <!-- Dashboard Summary -->
+      <div id="dashboardSummary" class="hidden mb-4 grid grid-cols-5 gap-2 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded border border-blue-300 flex-shrink-0">
+        <div class="text-center">
+          <p class="text-xs text-gray-600">OUTBREAK</p>
+          <p id="summaryOutbreak" class="text-2xl font-bold text-red-600">0</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-600">HIGH RISK</p>
+          <p id="summaryHigh" class="text-2xl font-bold text-orange-600">0</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-600">RISING</p>
+          <p id="summaryRising" class="text-2xl font-bold text-yellow-600">0</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-600">MONITOR</p>
+          <p id="summaryMonitor" class="text-2xl font-bold text-amber-600">0</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-gray-600">STABLE</p>
+          <p id="summaryStable" class="text-2xl font-bold text-green-600">0</p>
+        </div>
+      </div>
+
       <!-- Controls (Compact) -->
-      <div class="grid grid-cols-3 gap-2 mb-4 flex-shrink-0">
-        <div class="flex gap-2 items-center">
-          <input
-            title="size"
-            type="number"
-            id="obvSize"
-            value="50"
-            min="5"
-            max="500"
-            class="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm"
-          />
-          <button
-            onclick="simulateObvious()"
-            class="bg-green-600 text-white py-1.5 px-3 rounded text-sm font-semibold hover:bg-green-700 whitespace-nowrap"
-          >
-            <i class="fas fa-flask mr-1"></i>OBVIOUS
-          </button>
-        </div>
-        <div class="flex gap-2 items-center">
-          <input
-            title="size"
-            type="number"
-            id="randSize"
-            value="50"
-            min="5"
-            max="500"
-            class="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm"
-          />
-          <button
-            onclick="simulateRandom()"
-            class="bg-purple-600 text-white py-1.5 px-3 rounded text-sm font-semibold hover:bg-purple-700 whitespace-nowrap"
-          >
-            <i class="fas fa-random mr-1"></i>RANDOM
-          </button>
-        </div>
+      <div class="flex gap-2 items-center mb-4 flex-shrink-0">
+        <input
+          title="cases"
+          type="number"
+          id="simSize"
+          value="60"
+          min="15"
+          max="500"
+          class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+          placeholder="Number of cases"
+        />
+        <button
+          onclick="simulateObvious()"
+          class="bg-blue-600 text-white py-2 px-6 rounded font-semibold hover:bg-blue-700 text-sm whitespace-nowrap"
+        >
+          <i class="fas fa-flask mr-1"></i>SIMULATE
+        </button>
+        <button
+          onclick="runPrediction()"
+          class="bg-gray-600 text-white py-2 px-4 rounded text-sm hover:bg-gray-700 whitespace-nowrap"
+          title="Load existing batch prediction"
+        >
+          <i class="fas fa-brain mr-1"></i>PREDICT
+        </button>
       </div>
 
       <!-- Simulation Feedback -->
@@ -77,15 +90,6 @@
       >
         <i class="fas fa-check-circle mr-1"></i><span id="simMsg"></span>
       </div>
-
-      <!-- Prediction Button -->
-      <button
-        onclick="runPrediction()"
-        id="predictBtn"
-        class="w-full bg-red-600 text-white py-2 px-4 rounded font-bold hover:bg-red-700 mb-4 flex-shrink-0"
-      >
-        <i class="fas fa-brain mr-2"></i>RUN ADVANCED PREDICTION
-      </button>
 
       <!-- Results Container -->
       <div id="results" class="hidden flex flex-col gap-3">
